@@ -6,7 +6,6 @@ app = Flask(__name__)
 app.secret_key = 'c31k_cok_gizli_anahtar'
 socketio = SocketIO(app)
 
-# Basit bellek tabanlı kullanıcı veritabanı
 users = {}
 active_users = 0
 
@@ -47,7 +46,6 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
 
-# Anlık aktif kullanıcı takibi (Socket.IO)
 @socketio.on('connect')
 def handle_connect():
     global active_users
