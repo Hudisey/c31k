@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block title %}Giriş · C31K Prime{% endblock %}
+{% block content %}<main class="auth"><div class="auth-card"><img src="{{ url_for('static', filename='favicon.jpg') }}"><p class="eyebrow">C31K PRIME</p><h1>Giriş yap</h1><form method="post"><input name="username" placeholder="Username" required><input name="password" type="password" placeholder="Password" required><button class="btn">Devam et</button></form><p class="muted">Hesabın yok mu? <a href="{{ url_for('register') }}">Kayıt ol</a></p></div></main>{% endblock %}

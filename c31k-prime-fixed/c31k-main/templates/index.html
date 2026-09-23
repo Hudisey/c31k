@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}C31K Prime{% endblock %}
+{% block content %}
+<main class="home">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">C31K / PRIME</p>
+      <h1>Ne arıyorsan, burada bul.</h1>
+      <p class="sub">Games, tools ve VPN içeriklerini tek aramada keşfet.</p>
+    </div>
+    <form class="search" method="get" action="{{ url_for('index') }}">
+      <input name="q" value="{{ search_query }}" placeholder="Site içinde ara..." autocomplete="off">
+      <button>⌕</button>
+    </form>
+  </section>
+
+  <div class="category-tabs">
+    <a class="tab {% if not active_category %}active{% endif %}" href="{{ url_for('index') }}">All</a>
+    <a class="tab {% if active_category=='games' %}active{% endif %}" href="{{ url_for('index', category='games') }}">Games</a>
+    <a class="tab {% if active_category=='tools' %}active{% endif %}" href="{{ url_for('index', category='tools') }}">Tools</a>
+    <a class="tab {% if active_category=='vpns' %}active{% endif %}" href="{{ url_for('index', category='vpns') }}">VPN'S</a>
+  </div>
+
+  {% if not items %}<div class="empty">Aramana uygun içerik bulunamadı.</div>{% endif %}
+  <section class="grid">
+  {% for item in items %}
+    <article class="card">
+      <div class="thumb-wrap">
+        {% if item.thumbnail %}
+          {% if item.thumbnail.startswith('uploads/') %}<img class="thumb" src="{{ url_for('uploads', filename=item.thumbnail[8:]) }}" alt="">{% else %}<img class="thumb" src="{{ item.thumbnail }}" alt="">{% endif %}
+        {% else %}<div class="thumb placeholder">C31K</div>{% endif %}
+        <span class="tag">{{ categories.get(item.category, item.category) }}</span>
+      </div>
+      <div class="card-body">
+        <h2>{{ item.title }}</h2>
+        <p>{{ item.description }}</p>
+        {% if item.source_type == 'link' %}<a class="btn" href="{{ item.source }}" target="_blank" rel="noopener">Aç</a>
+        {% else %}<a class="btn" href="{{ url_for('uploads', filename=item.source[8:]) if item.source.startswith('uploads/') else item.source }}" {% if item.source_type in ['zip','file'] %}download{% endif %}>{{ 'ZIP İndir' if item.source_type == 'zip' else 'Dosyayı Al' }}</a>{% endif %}
+      </div>
+    </article>
+  {% endfor %}
+  </section>
+</main>
+{% endblock %}

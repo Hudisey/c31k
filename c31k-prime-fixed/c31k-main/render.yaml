@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: c31k-prime
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn c31k:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
