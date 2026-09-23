@@ -1,14 +1,17 @@
 """C31K Prime - tek dosyalık Flask sitesi (backend + şablonlar + CSS hepsi burada)."""
 import base64
 import os
-import sqlite3
 import time
 import uuid
 from functools import wraps
 from pathlib import Path
 
+import psycopg2
+import psycopg2.errors
+import psycopg2.extras
+import requests
 from flask import (Flask, Response, flash, redirect, render_template, request,
-                   send_from_directory, session, url_for)
+                   session, url_for)
 from jinja2 import DictLoader
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -23,15 +26,24 @@ AdminUser = "Username"
 ADMIN_USERS = {n.strip().lower() for n in (os.environ.get("ADMIN_USER") or AdminUser).split(",") if n.strip()}
 
 BASE_DIR = Path(__file__).resolve().parent
-# Render'da kalıcı disk kullanırsan DATA_DIR'i o diskin yoluna ayarla (örn. /var/data)
-DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR / "data"))
-UPLOAD_DIR = DATA_DIR / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA_DIR / "c31k.db"
+
+# ═══════════════════════════════════════════════════════════════
+#  KALICI VERİ  →  Render'ın diski her deploy'da sıfırlanır, bu yüzden
+#  veritabanı Supabase Postgres'te, dosyalar Supabase Storage'da tutulur.
+#  Render ortam değişkenlerine (Environment) şunları eklemen gerekiyor:
+#    DATABASE_URL          → Supabase > Project Settings > Database > Connection string (URI)
+#    SUPABASE_URL           → Supabase > Project Settings > API > Project URL
+#    SUPABASE_SERVICE_KEY   → Supabase > Project Settings > API > service_role key (secret!)
+#    SUPABASE_BUCKET        → Storage'da oluşturduğun public bucket adı (varsayılan: uploads)
+# ═══════════════════════════════════════════════════════════════
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+SUPABASE_BUCKET = os.environ.get("SUPABASE_BUCKET", "uploads")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
-app.config.update(MAX_CONTENT_LENGTH=500 * 1024 * 1024, SESSION_COOKIE_SAMESITE="Lax")
+app.config.update(MAX_CONTENT_LENGTH=250 * 1024 * 1024, SESSION_COOKIE_SAMESITE="Lax")
 
 IMG = {"png", "jpg", "jpeg", "webp", "gif"}
 ARCHIVES = {"zip", "rar", "7z"}
@@ -135,32 +147,61 @@ def t(key):
     return STR[get_lang()].get(key) or STR["en"].get(key, key)
 
 
-# ───────────────────────── veritabanı ─────────────────────────
+# ───────────────────────── veritabanı (Supabase Postgres) ─────────────────────────
+class DB:
+    """sqlite3.connect() ile aynı arayüzü taklit eden ince bir Postgres sarmalayıcı,
+    böylece aşağıdaki tüm conn.execute(...).fetchone()/.fetchall() çağrıları değişmeden çalışır."""
+
+    def __init__(self):
+        self.conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+
+    def execute(self, sql, params=()):
+        cur = self.conn.cursor()
+        cur.execute(sql.replace("?", "%s"), params)
+        return cur
+
+    def executescript(self, sql):
+        cur = self.conn.cursor()
+        cur.execute(sql)
+        return cur
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.conn.close()
+
+
 def db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return DB()
 
 
 def init_db():
+    if not DATABASE_URL:
+        # DATABASE_URL yoksa (yerelde ilk kurulum gibi) sessizce atla; app.py yine de import edilebilsin.
+        print("UYARI: DATABASE_URL ayarlanmamış, veritabanına bağlanılamıyor.")
+        return
     conn = db()
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             display_name TEXT NOT NULL,
             avatar TEXT DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS content (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
             category TEXT NOT NULL,
             description TEXT DEFAULT '',
             thumbnail TEXT DEFAULT '',
             source_type TEXT NOT NULL DEFAULT 'link',
             source TEXT NOT NULL DEFAULT '',
-            created_at REAL NOT NULL
+            created_at DOUBLE PRECISION NOT NULL
         );
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -207,33 +248,49 @@ def check_ext(f, allowed):
 
 
 def save_upload(f, folder, allowed):
-    """Dosyayı uploads/<folder>/<uuid>/<orijinal_ad> olarak kaydeder, göreli yolu döner."""
+    """Dosyayı Supabase Storage'a folder/<uuid>/<orijinal_ad> olarak yükler, kalıcı public URL'i döner."""
     if not f or not f.filename:
         return ""
     name = secure_filename(f.filename) or "file"
     if ext_of(name) not in allowed:
         raise ValueError("bad_ext")
-    target = UPLOAD_DIR / folder / uuid.uuid4().hex
-    target.mkdir(parents=True, exist_ok=True)
-    f.save(target / name)
-    return f"{folder}/{target.name}/{name}"
+    path = f"{folder}/{uuid.uuid4().hex}/{name}"
+    resp = requests.post(
+        f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{path}",
+        headers={
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Content-Type": f.mimetype or "application/octet-stream",
+            "x-upsert": "true",
+        },
+        data=f.read(),
+        timeout=120,
+    )
+    if resp.status_code >= 300:
+        raise ValueError("upload_failed")
+    return f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{path}"
 
 
-def remove_upload(rel):
-    if rel and not rel.startswith("http"):
-        try:
-            p = UPLOAD_DIR / rel
-            p.unlink(missing_ok=True)
-            p.parent.rmdir()
-        except OSError:
-            pass
+def remove_upload(url):
+    """Supabase Storage'daki dosyayı siler. Eski/yabancı linkler (http ile başlayan ama bizim
+    bucket'ımızda olmayan) dokunulmadan bırakılır."""
+    marker = f"/object/public/{SUPABASE_BUCKET}/"
+    if not url or marker not in url:
+        return
+    path = url.split(marker, 1)[-1]
+    try:
+        requests.delete(
+            f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{path}",
+            headers={"Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "apikey": SUPABASE_SERVICE_KEY},
+            timeout=30,
+        )
+    except requests.RequestException:
+        pass
 
 
 def media(path):
-    """Yüklenmiş dosya ise /uploads/... adresine, dış link ise olduğu gibi çevirir."""
-    if not path:
-        return ""
-    return path if path.startswith(("http://", "https://")) else url_for("uploads", filename=path)
+    """Artık tüm dosyalar Supabase Storage'da tutuluyor, bu yüzden kayıtlı değer zaten tam URL."""
+    return path or ""
 
 
 def is_http(url):
@@ -268,30 +325,11 @@ def admin_only(fn):
     return wrapper
 
 
-# ───────────────────────── aktif kullanıcı sayacı ─────────────────────────
-ACTIVE_WINDOW = 120  # saniye: bu süre içinde istek atan giriş yapmış kullanıcılar "aktif" sayılır
-_active_users = {}  # username -> son görülme zamanı (unix ts)
-
-
-def touch_active_user():
-    if "username" in session:
-        _active_users[session["username"]] = time.time()
-
-
-def active_user_count():
-    now = time.time()
-    stale = [u for u, ts in _active_users.items() if now - ts > ACTIVE_WINDOW]
-    for u in stale:
-        _active_users.pop(u, None)
-    return len(_active_users)
-
-
 # ───────────────────────── site kilidi ─────────────────────────
 @app.before_request
 def gate():
     if request.endpoint in {None, "static", "favicon", "set_lang"}:
         return None
-    touch_active_user()
     until = maintenance_until()
     if until and not is_admin() and request.endpoint not in {"login", "logout"}:
         return render_template("maintenance.html", until=until), 503
@@ -301,7 +339,8 @@ def gate():
 @app.context_processor
 def inject():
     conn = db()
-    counts = {r[0]: r[1] for r in conn.execute("SELECT category, COUNT(*) FROM content GROUP BY category")}
+    counts = {r["category"]: r["cnt"] for r in
+              conn.execute("SELECT category, COUNT(*) AS cnt FROM content GROUP BY category").fetchall()}
     me = None
     if "username" in session:
         me = conn.execute(
@@ -309,8 +348,7 @@ def inject():
         ).fetchone()
     conn.close()
     return {"me": me, "categories": CATEGORIES, "counts": counts,
-            "media": media, "t": t, "lang": get_lang(), "is_admin": is_admin(),
-            "active_users": active_user_count()}
+            "media": media, "t": t, "lang": get_lang(), "is_admin": is_admin()}
 
 
 # ───────────────────────── sayfalar ─────────────────────────
@@ -376,7 +414,8 @@ def register():
                     session.clear()
                     session["username"] = username
                     return redirect(url_for("index"))
-                except sqlite3.IntegrityError:
+                except psycopg2.errors.UniqueViolation:
+                    conn.rollback()
                     conn.close()
                     flash("name_taken")
     return render_template("register.html")
@@ -596,12 +635,6 @@ def admin_maintenance_clear():
     return redirect(url_for("admin"))
 
 
-@app.route("/uploads/<path:filename>")
-def uploads(filename):
-    is_image = ext_of(filename) in IMG
-    return send_from_directory(UPLOAD_DIR, filename, as_attachment=not is_image)
-
-
 @app.route("/favicon.jpg")
 def favicon():
     return Response(FAVICON, mimetype="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
@@ -632,8 +665,6 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}
 .nav a{position:relative;padding:8px 14px;border-radius:10px;color:var(--muted);transition:color .2s,background .2s}
 .nav a:hover{color:var(--text);background:var(--glow)}
 .nav a.on{color:var(--text);box-shadow:inset 0 -2px 0 var(--a)}
-.active-badge{display:inline-flex;align-items:center;gap:6px;margin:0 4px 0 -2px;padding:6px 10px;border-radius:10px;font-size:12px;font-weight:600;color:var(--muted);background:var(--glow)}
-.active-badge i{width:7px;height:7px;border-radius:50%;background:#3ecf6b;box-shadow:0 0 6px #3ecf6b;display:inline-block}
 .right{display:flex;align-items:center;gap:10px;margin-left:auto}
 .mini{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--on-a);overflow:hidden;flex:none}
 .mini img{width:100%;height:100%;object-fit:cover}
@@ -777,7 +808,7 @@ TEMPLATES = {
   {% if me %}
   {% set cat = request.args.get('category','') if request.endpoint == 'index' else '' %}
   <nav class="nav">
-    {% for key, name in categories.items() %}<a class="{{ 'on' if cat == key }}" href="{{ url_for('index', category=key) }}">{{ name }}</a>{% if key == 'games' %}<span class="active-badge" title="Aktif Kullanıcı"><i></i>{{ active_users }}</span>{% endif %}{% endfor %}
+    {% for key, name in categories.items() %}<a class="{{ 'on' if cat == key }}" href="{{ url_for('index', category=key) }}">{{ name }}</a>{% endfor %}
   </nav>
   {% endif %}
   <div class="right">
