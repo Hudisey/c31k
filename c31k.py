@@ -1,7 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
-app = Flask(__name__)
+# Doğru klasör yollarını tanıtıyoruz (Internal Server Error'ı önler)
+template_dir = os.path.abspath('templates')
+static_dir = os.path.abspath('static')
+
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = 'c31k_cok_gizli_anahtar'
 
 users = {}
