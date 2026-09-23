@@ -1,3 +1,0 @@
-{% extends 'base.html' %}
-{% block title %}Profil · C31K Prime{% endblock %}
-{% block content %}<main class="page"><div class="panel profile-panel"><p class="eyebrow">PROFILE</p><h1>Profilini düzenle</h1><div class="avatar">{% if user.avatar %}<img src="{{ url_for('uploads', filename=user.avatar[8:]) }}" alt="">{% else %}{{ user.username[0]|upper }}{% endif %}</div><form method="post" enctype="multipart/form-data"><label>Görünen ad</label><input name="display_name" value="{{ user.display_name }}" maxlength="40"><label>Profil görseli</label><input type="file" name="avatar" accept="image/png,image/jpeg,image/webp"><button class="btn">Kaydet</button></form></div></main>{% endblock %}
