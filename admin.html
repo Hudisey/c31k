@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Paneli</title>
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='favicon.jpg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="light-mode">
+    <header>
+        <h1>Admin Paneli</h1>
+        <a href="{{ url_for('index') }}" class="btn">Siteye Dön</a>
+    </header>
+    <main class="admin-main">
+        <div class="form-card">
+            <h2>Yeni Oyun / Araç Ekle</h2>
+            <form method="POST">
+                <label>Başlık:</label>
+                <input type="text" name="title" required>
+                
+                <label>Kategori Seç:</label>
+                <select name="category" required>
+                    <option value="indirilebilir">İndirilebilen Oyunlar</option>
+                    <option value="zip">Zip ile İndirilen Oyunlar</option>
+                    <option value="site">Site Üzerinden Oynanan</option>
+                    <option value="tools">Tools & VPN</option>
+                </select>
+
+                <label>Thumbnail Görsel Linki (URL):</label>
+                <input type="text" name="thumbnail" placeholder="https://..." required>
+
+                <label>Oyun / Site Linki (URL):</label>
+                <input type="text" name="url" placeholder="https://..." required>
+
+                <button type="submit" class="btn">Ekle</button>
+            </form>
+        </div>
+
+        <div class="list-card">
+            <h2>Mevcut İçerikler</h2>
+            <ul>
+                {% for game in games %}
+                <li>
+                    <span>{{ game.title }} ({{ game.category }})</span>
+                    <a href="{{ url_for('delete_game', game_id=game.id) }}" class="del-btn">Sil</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </main>
+</body>
+</html>
