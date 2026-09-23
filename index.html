@@ -3,73 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <title>MEB Engelsiz Oyun & Araç Portalı</title>
-    <!-- Gönderdiğin fotoğraf favicon olarak ayarlandı -->
     <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='favicon.jpg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body class="light-mode">
     <header>
-        <h1>MEB Engelsiz Oyun & Araç Portalı</h1>
+        <h1>MEB Engelsiz Portal</h1>
         <div class="user-info">
             <span>Hoş geldin, <strong>{{ username }}</strong></span>
-            <span class="badge">Anlık Aktif Kullanıcı: <strong id="user-count">0</strong></span>
-            <button id="theme-toggle">🌙 / ☀️ Tema</button>
-            <a href="{{ url_for('logout') }}" class="logout-btn">Çıkış Yap</a>
+            <span class="badge">Aktif: <strong id="user-count">0</strong></span>
+            {% if username == 'admin' %}
+                <a href="{{ url_for('admin') }}" class="admin-btn">⚙️ Admin Paneli</a>
+            {% endif %}
+            <button id="theme-toggle">🌙 / ☀️</button>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Çıkış</a>
         </div>
     </header>
 
+    <div class="search-bar-container">
+        <form method="GET" action="{{ url_for('index') }}">
+            <input type="text" name="q" placeholder="Oyun veya araç ara..." value="{{ search_query }}">
+            <button type="submit" class="btn">Ara</button>
+        </form>
+    </div>
+
     <main>
-        <!-- Kategori 1: İndirilebilen Oyunlar -->
+        <!-- Kategori: İndirilebilen Oyunlar -->
         <section class="category">
             <h2>📥 İndirilebilen Oyunlar</h2>
             <div class="card-grid">
+                {% for game in games if game.category == 'indirilebilir' %}
                 <div class="card">
-                    <h3>Örnek Oyun 1</h3>
-                    <p>Doğrudan indirip oynayabileceğiniz oyunlar.</p>
-                    <a href="#" class="btn" target="_blank">İndir</a>
+                    <img src="{{ game.thumbnail }}" alt="Thumbnail" class="thumb">
+                    <h3>{{ game.title }}</h3>
+                    <a href="{{ game.url }}" class="btn" target="_blank">İndir / Oyna</a>
                 </div>
+                {% endfor %}
             </div>
         </section>
 
-        <!-- Kategori 2: Zip ile İndirilen Oyunlar -->
+        <!-- Kategori: Zip ile İndirilen Oyunlar -->
         <section class="category">
             <h2>📦 Zip ile İndirilen Oyunlar</h2>
             <div class="card-grid">
+                {% for game in games if game.category == 'zip' %}
                 <div class="card">
-                    <h3>Örnek Zip Oyunu</h3>
-                    <p>Arşivden çıkarıp direkt çalıştırılabilen dosyalar.</p>
-                    <a href="#" class="btn" target="_blank">Zip İndir</a>
+                    <img src="{{ game.thumbnail }}" alt="Thumbnail" class="thumb">
+                    <h3>{{ game.title }}</h3>
+                    <a href="{{ game.url }}" class="btn" target="_blank">Zip İndir</a>
                 </div>
+                {% endfor %}
             </div>
         </section>
 
-        <!-- Kategori 3: Site Üzerinden Oynanan Oyunlar -->
+        <!-- Kategori: Site Üzerinden Oynanan Oyunlar -->
         <section class="category">
             <h2>🌐 Site Üzerinden Oynanan Oyunlar</h2>
             <div class="card-grid">
+                {% for game in games if game.category == 'site' %}
                 <div class="card">
-                    <h3>Tarayıcı Oyunu</h3>
-                    <p>Sekme üzerinden engelsiz keyif.</p>
-                    <a href="#" class="btn" target="_blank">Oyna</a>
+                    <img src="{{ game.thumbnail }}" alt="Thumbnail" class="thumb">
+                    <h3>{{ game.title }}</h3>
+                    <a href="{{ game.url }}" class="btn" target="_blank">Oyna</a>
                 </div>
+                {% endfor %}
             </div>
         </section>
 
-        <!-- Kategori 4: Tools (Araçlar) -->
+        <!-- Kategori: Tools -->
         <section class="category">
             <h2>🛠️ Tools (Araçlar & VPN)</h2>
             <div class="card-grid">
+                {% for game in games if game.category == 'tools' %}
                 <div class="card">
-                    <h3>Psiphon VPN</h3>
-                    <p>MEB engelini aşmak için alternatif bağlantı aracı.</p>
-                    <a href="#" class="btn" target="_blank">Kullan / İndir</a>
+                    <img src="{{ game.thumbnail }}" alt="Thumbnail" class="thumb">
+                    <h3>{{ game.title }}</h3>
+                    <a href="{{ game.url }}" class="btn" target="_blank">Git</a>
                 </div>
-                <div class="card">
-                    <h3>Temp Mail & Diğer Araçlar</h3>
-                    <p>Listendeki diğer faydalı site ve araçlar.</p>
-                    <a href="#" class="btn" target="_blank">Git</a>
-                </div>
+                {% endfor %}
             </div>
         </section>
     </main>
@@ -82,13 +94,9 @@
 
         const toggleBtn = document.getElementById('theme-toggle');
         const body = document.body;
-
         toggleBtn.addEventListener('click', () => {
-            if (body.classList.contains('light-mode')) {
-                body.classList.replace('light-mode', 'dark-mode');
-            } else {
-                body.classList.replace('dark-mode', 'light-mode');
-            }
+            body.classList.toggle('dark-mode');
+            body.classList.toggle('light-mode');
         });
     </script>
 </body>
