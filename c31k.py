@@ -31,7 +31,7 @@ DB_PATH = DATA_DIR / "c31k.db"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
-app.config.update(MAX_CONTENT_LENGTH=250 * 1024 * 1024, SESSION_COOKIE_SAMESITE="Lax")
+app.config.update(MAX_CONTENT_LENGTH=500 * 1024 * 1024, SESSION_COOKIE_SAMESITE="Lax")
 
 IMG = {"png", "jpg", "jpeg", "webp", "gif"}
 ARCHIVES = {"zip", "rar", "7z"}
@@ -268,11 +268,30 @@ def admin_only(fn):
     return wrapper
 
 
+# ───────────────────────── aktif kullanıcı sayacı ─────────────────────────
+ACTIVE_WINDOW = 120  # saniye: bu süre içinde istek atan giriş yapmış kullanıcılar "aktif" sayılır
+_active_users = {}  # username -> son görülme zamanı (unix ts)
+
+
+def touch_active_user():
+    if "username" in session:
+        _active_users[session["username"]] = time.time()
+
+
+def active_user_count():
+    now = time.time()
+    stale = [u for u, ts in _active_users.items() if now - ts > ACTIVE_WINDOW]
+    for u in stale:
+        _active_users.pop(u, None)
+    return len(_active_users)
+
+
 # ───────────────────────── site kilidi ─────────────────────────
 @app.before_request
 def gate():
     if request.endpoint in {None, "static", "favicon", "set_lang"}:
         return None
+    touch_active_user()
     until = maintenance_until()
     if until and not is_admin() and request.endpoint not in {"login", "logout"}:
         return render_template("maintenance.html", until=until), 503
@@ -290,7 +309,8 @@ def inject():
         ).fetchone()
     conn.close()
     return {"me": me, "categories": CATEGORIES, "counts": counts,
-            "media": media, "t": t, "lang": get_lang(), "is_admin": is_admin()}
+            "media": media, "t": t, "lang": get_lang(), "is_admin": is_admin(),
+            "active_users": active_user_count()}
 
 
 # ───────────────────────── sayfalar ─────────────────────────
@@ -612,6 +632,8 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}
 .nav a{position:relative;padding:8px 14px;border-radius:10px;color:var(--muted);transition:color .2s,background .2s}
 .nav a:hover{color:var(--text);background:var(--glow)}
 .nav a.on{color:var(--text);box-shadow:inset 0 -2px 0 var(--a)}
+.active-badge{display:inline-flex;align-items:center;gap:6px;margin:0 4px 0 -2px;padding:6px 10px;border-radius:10px;font-size:12px;font-weight:600;color:var(--muted);background:var(--glow)}
+.active-badge i{width:7px;height:7px;border-radius:50%;background:#3ecf6b;box-shadow:0 0 6px #3ecf6b;display:inline-block}
 .right{display:flex;align-items:center;gap:10px;margin-left:auto}
 .mini{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--on-a);overflow:hidden;flex:none}
 .mini img{width:100%;height:100%;object-fit:cover}
@@ -755,7 +777,7 @@ TEMPLATES = {
   {% if me %}
   {% set cat = request.args.get('category','') if request.endpoint == 'index' else '' %}
   <nav class="nav">
-    {% for key, name in categories.items() %}<a class="{{ 'on' if cat == key }}" href="{{ url_for('index', category=key) }}">{{ name }}</a>{% endfor %}
+    {% for key, name in categories.items() %}<a class="{{ 'on' if cat == key }}" href="{{ url_for('index', category=key) }}">{{ name }}</a>{% if key == 'games' %}<span class="active-badge" title="Aktif Kullanıcı"><i></i>{{ active_users }}</span>{% endif %}{% endfor %}
   </nav>
   {% endif %}
   <div class="right">
