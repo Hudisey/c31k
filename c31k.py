@@ -1,17 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask_socketio import SocketIO, emit
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = 'c31k_cok_gizli_anahtar'
-socketio = SocketIO(app)
 
-# Bellek tabanlı veritabanı (Admin ve Oyunlar için)
 users = {}
-# Varsayılan Admin hesabı (Kullanıcı adı: admin, Şifre: 1234)
 users['admin'] = generate_password_hash('1234')
 
-# Örnek başlangıç içerikleri (Kategoriler: indirilebilir, zip, site, tools)
 games = [
     {
         "id": 1,
@@ -29,14 +24,11 @@ games = [
     }
 ]
 
-active_users = 0
-
 @app.route('/')
 def index():
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    # Arama filtresi
     search_query = request.args.get('q', '').lower()
     filtered_games = [g for g in games if search_query in g['title'].lower()] if search_query else games
     
@@ -107,17 +99,5 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
 
-@socketio.on('connect')
-def handle_connect():
-    global active_users
-    active_users += 1
-    emit('update_user_count', {'count': active_users}, broadcast=True)
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    global active_users
-    active_users = max(0, active_users - 1)
-    emit('update_user_count', {'count': active_users}, broadcast=True)
-
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    app.run(debug=True)
