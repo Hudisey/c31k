@@ -266,9 +266,9 @@ def save_upload(f, folder, allowed):
         data=f.read(),
         timeout=120,
     )
-    if resp.status_code >= 300:
+       if resp.status_code >= 300:
+        print("SUPABASE UPLOAD ERROR:", resp.status_code, resp.text, flush=True)
         raise ValueError("upload_failed")
-    return f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{path}"
 
 
 def remove_upload(url):
