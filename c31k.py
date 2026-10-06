@@ -8,6 +8,7 @@ from functools import wraps
 from pathlib import Path
 
 import boto3
+from urllib.parse import quote
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from markupsafe import Markup, escape
@@ -41,6 +42,9 @@ R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID", "")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID", "")
 R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "")
 R2_BUCKET = os.environ.get("R2_BUCKET", "")
+# (Önerilen) R2 bucket'ın herkese açık adresi, örn. https://pub-xxxx.r2.dev veya kendi alan adın.
+# Ayarlanırsa resim/indirme linkleri imzasız, sabit ve tarayıcıda önbelleklenebilir olur.
+R2_PUBLIC_URL = os.environ.get("R2_PUBLIC_URL", "").strip().rstrip("/")
 
 r2 = boto3.client(
     "s3",
@@ -955,21 +959,24 @@ def admin_maintenance_clear():
 
 @app.route("/uploads/<path:filename>")
 def uploads(filename):
+    """Dosyayı Render üzerinden AKITMAZ; tarayıcıyı doğrudan R2'ye yönlendirir.
+    Böylece indirmeler Render'ın 5 GB bant genişliğinden değil, R2'den (çıkış ücretsiz) gider."""
     is_image = ext_of(filename) in IMG
-    try:
-        obj = r2.get_object(Bucket=R2_BUCKET, Key=filename)
-    except ClientError:
-        return Response("Not found", status=404)
-    headers = {}
-    if obj.get("ContentLength") is not None:
-        headers["Content-Length"] = str(obj["ContentLength"])
-    if not is_image:
-        headers["Content-Disposition"] = f'attachment; filename="{os.path.basename(filename)}"'
-    return Response(
-        stream_with_context(obj["Body"].iter_chunks(chunk_size=65536)),
-        mimetype=obj.get("ContentType") or "application/octet-stream",
-        headers=headers,
-    )
+    if R2_PUBLIC_URL:
+        url = f"{R2_PUBLIC_URL}/{quote(filename)}"
+        cache = "public, max-age=86400"
+    else:
+        params = {"Bucket": R2_BUCKET, "Key": filename}
+        if not is_image:
+            params["ResponseContentDisposition"] = f'attachment; filename="{os.path.basename(filename)}"'
+        try:
+            url = r2.generate_presigned_url("get_object", Params=params, ExpiresIn=3600)
+        except ClientError:
+            return Response("Not found", status=404)
+        cache = "private, max-age=600"
+    resp = redirect(url, 302)
+    resp.headers["Cache-Control"] = cache if is_image else "no-store"
+    return resp
 
 
 @app.route("/favicon.jpg")
