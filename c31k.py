@@ -1207,7 +1207,6 @@ form.search input[name=q]{flex:1;min-width:0;border:0;border-radius:0;box-shadow
 .vb{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.35);color:#fff;font:inherit;font-size:14px;cursor:pointer;transition:background .15s,border-color .15s,color .15s,transform .15s}
 .vb:hover{transform:scale(1.06);border-color:#fff}.vb b{font-weight:600;min-width:1ch}
 .vb.on{background:#2ecc71;border-color:#2ecc71;color:#06220f}.vb.dn.on{background:#ff4d61;border-color:#ff4d61;color:#2a0509}
-@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
 body::before{will-change:transform;transform:translateZ(0)}
 .rc-main .bgimg{transform:translateZ(0)}
 .rc-txt{min-width:0}
@@ -1392,6 +1391,41 @@ TEMPLATES = {
 """ + THEME_INIT + """
 <style>:root{--bgimg:url('{{ url_for("static", filename="bg.jpg") }}')}</style>
 <style>""" + CSS + """</style></head><body>
+<script>
+/* yumuşak fare tekerleği kaydırması */
+(function(){
+  var target=0,current=0,raf=0;
+  function maxY(){return document.documentElement.scrollHeight-innerHeight}
+  function jump(y){window.scrollTo({top:y,left:0,behavior:'instant'})}
+  function inner(el,dy){
+    while(el&&el!==document.body&&el!==document.documentElement){
+      var cs=getComputedStyle(el);
+      if(/(auto|scroll)/.test(cs.overflowY)&&el.scrollHeight>el.clientHeight){
+        if(dy<0?el.scrollTop>0:el.scrollTop+el.clientHeight<el.scrollHeight-1)return true;
+      }
+      el=el.parentElement;
+    }
+    return false;
+  }
+  function loop(){
+    current+=(target-current)*0.14;
+    if(Math.abs(target-current)<0.5){current=target;raf=0;jump(current);return}
+    jump(current);raf=requestAnimationFrame(loop);
+  }
+  addEventListener('wheel',function(e){
+    if(e.ctrlKey||e.defaultPrevented||document.querySelector('dialog[open]'))return;
+    if(Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
+    if(e.deltaMode===0&&Math.abs(e.deltaY)<50)return;
+    if(inner(e.target,e.deltaY))return;
+    e.preventDefault();
+    if(!raf){current=window.scrollY;target=current}
+    var dy=e.deltaMode===1?e.deltaY*40:e.deltaMode===2?e.deltaY*innerHeight:e.deltaY;
+    target=Math.max(0,Math.min(maxY(),target+dy));
+    if(!raf)raf=requestAnimationFrame(loop);
+  },{passive:false});
+  addEventListener('scroll',function(){if(!raf){current=target=window.scrollY}},{passive:true});
+})();
+</script>
 <header class="top">
   <a class="brand" href="{{ url_for('index') }}"><img src="{{ url_for('favicon') }}?v={{ favicon_v }}" alt=""><span>{{ t('made_by') }}</span></a>
   {% if me %}
@@ -1509,40 +1543,6 @@ if(window.wireCrop)wireCrop('avIn','avPrev','circle');
 """ + FLASH_JS + """
 addEventListener('keydown',e=>{if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){const s=document.querySelector('[name=q]');if(s){e.preventDefault();s.focus()}}});
 
-/* yumuşak fare tekerleği kaydırması */
-(function(){
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-  var target=0,current=0,raf=0;
-  function maxY(){return document.documentElement.scrollHeight-innerHeight}
-  function jump(y){window.scrollTo({top:y,left:0,behavior:'instant'})}
-  function inner(el,dy){
-    while(el&&el!==document.body&&el!==document.documentElement){
-      var cs=getComputedStyle(el);
-      if(/(auto|scroll)/.test(cs.overflowY)&&el.scrollHeight>el.clientHeight){
-        if(dy<0?el.scrollTop>0:el.scrollTop+el.clientHeight<el.scrollHeight-1)return true;
-      }
-      el=el.parentElement;
-    }
-    return false;
-  }
-  function loop(){
-    current+=(target-current)*0.14;
-    if(Math.abs(target-current)<0.5){current=target;raf=0;jump(current);return}
-    jump(current);raf=requestAnimationFrame(loop);
-  }
-  addEventListener('wheel',function(e){
-    if(e.ctrlKey||e.defaultPrevented||document.querySelector('dialog[open]'))return;
-    if(Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
-    if(e.deltaMode===0&&Math.abs(e.deltaY)<50)return;
-    if(inner(e.target,e.deltaY))return;
-    e.preventDefault();
-    if(!raf){current=window.scrollY;target=current}
-    var dy=e.deltaMode===1?e.deltaY*40:e.deltaMode===2?e.deltaY*innerHeight:e.deltaY;
-    target=Math.max(0,Math.min(maxY(),target+dy));
-    if(!raf)raf=requestAnimationFrame(loop);
-  },{passive:false});
-  addEventListener('scroll',function(){if(!raf){current=target=window.scrollY}},{passive:true});
-})();
 </script>
 </body></html>""",
 
