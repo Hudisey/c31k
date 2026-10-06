@@ -1021,19 +1021,15 @@ def admin_maintenance_clear():
 
 @app.route("/uploads/<path:filename>")
 def uploads(filename):
-    """Resimler (küçük) Flask üzerinden sunulur ve tarayıcıda 1 gün önbelleklenir, böylece
-    kesin çalışır ve bant genişliği tüketimi çok düşük kalır. Büyük dosyalar (exe, zip...)
-    Render'dan AKITMAZ; tarayıcı doğrudan R2'ye yönlendirilir."""
-    is_image = ext_of(filename) in IMG
-    if is_image:
-        if R2_PUBLIC_URL:
-            resp = redirect(f"{R2_PUBLIC_URL}/{quote(filename)}", 302)
-            resp.headers["Cache-Control"] = "public, max-age=86400"
-            return resp
+    """Resimler (küçük) Flask üzerinden sunulur ve tarayıcıda 1 gün önbelleklenir.
+    Büyük dosyalar (exe, zip...) Render'dan AKITMAZ; tarayıcı doğrudan R2'ye yönlendirilir."""
+    if ext_of(filename) in IMG:
         try:
             obj = r2.get_object(Bucket=R2_BUCKET, Key=filename)
-        except ClientError:
-            return Response("Not found", status=404)
+        except ClientError as exc:
+            code = getattr(exc, "response", {}).get("Error", {}).get("Code", "error")
+            app.logger.warning("R2 get_object failed for %s: %s", filename, code)
+            return Response(f"Not found ({code})", status=404)
         headers = {"Cache-Control": "public, max-age=86400"}
         if obj.get("ContentLength") is not None:
             headers["Content-Length"] = str(obj["ContentLength"])
@@ -1512,6 +1508,41 @@ if(pb){
 if(window.wireCrop)wireCrop('avIn','avPrev','circle');
 """ + FLASH_JS + """
 addEventListener('keydown',e=>{if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){const s=document.querySelector('[name=q]');if(s){e.preventDefault();s.focus()}}});
+
+/* yumuşak fare tekerleği kaydırması */
+(function(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var target=0,current=0,raf=0;
+  function maxY(){return document.documentElement.scrollHeight-innerHeight}
+  function jump(y){window.scrollTo({top:y,left:0,behavior:'instant'})}
+  function inner(el,dy){
+    while(el&&el!==document.body&&el!==document.documentElement){
+      var cs=getComputedStyle(el);
+      if(/(auto|scroll)/.test(cs.overflowY)&&el.scrollHeight>el.clientHeight){
+        if(dy<0?el.scrollTop>0:el.scrollTop+el.clientHeight<el.scrollHeight-1)return true;
+      }
+      el=el.parentElement;
+    }
+    return false;
+  }
+  function loop(){
+    current+=(target-current)*0.14;
+    if(Math.abs(target-current)<0.5){current=target;raf=0;jump(current);return}
+    jump(current);raf=requestAnimationFrame(loop);
+  }
+  addEventListener('wheel',function(e){
+    if(e.ctrlKey||e.defaultPrevented||document.querySelector('dialog[open]'))return;
+    if(Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
+    if(e.deltaMode===0&&Math.abs(e.deltaY)<50)return;
+    if(inner(e.target,e.deltaY))return;
+    e.preventDefault();
+    if(!raf){current=window.scrollY;target=current}
+    var dy=e.deltaMode===1?e.deltaY*40:e.deltaMode===2?e.deltaY*innerHeight:e.deltaY;
+    target=Math.max(0,Math.min(maxY(),target+dy));
+    if(!raf)raf=requestAnimationFrame(loop);
+  },{passive:false});
+  addEventListener('scroll',function(){if(!raf){current=target=window.scrollY}},{passive:true});
+})();
 </script>
 </body></html>""",
 
