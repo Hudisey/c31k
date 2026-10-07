@@ -1021,35 +1021,39 @@ def admin_maintenance_clear():
 
 @app.route("/uploads/<path:filename>")
 def uploads(filename):
-    """Resimler (küçük) Flask üzerinden sunulur ve tarayıcıda 1 gün önbelleklenir.
-    Büyük dosyalar (exe, zip...) Render'dan AKITMAZ; tarayıcı doğrudan R2'ye yönlendirilir."""
-    if ext_of(filename) in IMG:
-        try:
-            obj = r2.get_object(Bucket=R2_BUCKET, Key=filename)
-        except ClientError as exc:
-            code = getattr(exc, "response", {}).get("Error", {}).get("Code", "error")
-            app.logger.warning("R2 get_object failed for %s: %s", filename, code)
-            return Response(f"Not found ({code})", status=404)
-        headers = {"Cache-Control": "public, max-age=86400"}
-        if obj.get("ContentLength") is not None:
-            headers["Content-Length"] = str(obj["ContentLength"])
-        return Response(
-            stream_with_context(obj["Body"].iter_chunks(chunk_size=65536)),
-            mimetype=obj.get("ContentType") or "application/octet-stream",
-            headers=headers,
-        )
-    if R2_PUBLIC_URL:
-        url = f"{R2_PUBLIC_URL}/{quote(filename)}"
+    """Tüm dosyalar sitenin kendi adresinden (c31k.onrender.com) sunulur; R2/başka bir alan adına
+    yönlendirme YOK (okul/MEB filtreleri r2.dev gibi adresleri engelliyor). Range desteği var:
+    yarım kalan indirmeler devam ettirilebilir."""
+    is_image = ext_of(filename) in IMG
+    kwargs = {"Bucket": R2_BUCKET, "Key": filename}
+    rng = request.headers.get("Range", "")
+    if rng.startswith("bytes=") and "," not in rng:
+        kwargs["Range"] = rng
+    try:
+        obj = r2.get_object(**kwargs)
+    except ClientError as exc:
+        code = getattr(exc, "response", {}).get("Error", {}).get("Code", "error")
+        app.logger.warning("R2 get_object failed for %s: %s", filename, code)
+        if code == "InvalidRange":
+            return Response(status=416)
+        return Response(f"Not found ({code})", status=404)
+    headers = {"Accept-Ranges": "bytes",
+               "Cache-Control": "public, max-age=86400" if is_image else "private, max-age=3600"}
+    if obj.get("ContentLength") is not None:
+        headers["Content-Length"] = str(obj["ContentLength"])
+    status = 200
+    if "Range" in kwargs and obj.get("ContentRange"):
+        status = 206
+        headers["Content-Range"] = obj["ContentRange"]
+    if is_image:
+        mime = obj.get("ContentType") or "application/octet-stream"
     else:
-        params = {"Bucket": R2_BUCKET, "Key": filename,
-                  "ResponseContentDisposition": f'attachment; filename="{os.path.basename(filename)}"'}
-        try:
-            url = r2.generate_presigned_url("get_object", Params=params, ExpiresIn=3600)
-        except ClientError:
-            return Response("Not found", status=404)
-    resp = redirect(url, 302)
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+        mime = "application/octet-stream"
+        headers["Content-Disposition"] = f'attachment; filename="{os.path.basename(filename)}"'
+    return Response(
+        stream_with_context(obj["Body"].iter_chunks(chunk_size=65536)),
+        status=status, mimetype=mime, headers=headers,
+    )
 
 
 _fav_cache = {"key": None, "data": b"", "mime": "image/jpeg"}
@@ -1559,7 +1563,7 @@ addEventListener('keydown',e=>{if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(doc
   <section class="list">
   {% for item in items %}
     {% set link = item.source_type == 'link' %}
-    <a class="rc" href="{{ item.source if link else media(item.source) }}"{% if link %} target="_blank" rel="noopener noreferrer"{% endif %}>
+    <a class="rc" href="{{ item.source if link else media(item.source) }}"{% if link %} target="_blank" rel="noopener noreferrer"{% else %} download{% endif %}>
       <div class="rc-thumb">{{ item.title[:1]|upper }}{% if item.thumbnail %}<img src="{{ media(item.thumbnail) }}" alt="" loading="lazy">{% endif %}</div>
       <div class="rc-main">
         {% if item.thumbnail %}<img class="bgimg" src="{{ media(item.thumbnail) }}" alt="" loading="lazy">{% endif %}
