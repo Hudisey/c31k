@@ -161,7 +161,7 @@ STR = {
         "user_unbanned": "User unbanned.", "cant_ban_admin": "You can't ban an admin.",
         "banned_users": "Banned users", "unban": "Unban",
         "profile_search": "Search profiles", "profile_search_ph": "Search users...",
-        "no_users_found": "No users found.", "customize_photo": "Customize picture", "crop_fill": "Fill", "crop_fit": "Fit", "crop_reset": "Reset", "crop_hint": "Drag to move, scroll or pinch to zoom",
+        "no_users_found": "No users found.", "customize_photo": "Customize picture",
         "pending_title": "Please wait for the admin's decision to enter the site",
         "signup_requests": "Sign-up requests", "recent_users": "Recently registered users",
         "approve": "Approve", "reject": "Reject", "status_wait": "Waiting", "status_ok": "Approved",
@@ -224,7 +224,7 @@ STR = {
         "user_unbanned": "Banı kaldırıldı.", "cant_ban_admin": "Bir admini banlayamazsın.",
         "banned_users": "Banlı kullanıcılar", "unban": "Banı kaldır",
         "profile_search": "Profil ara", "profile_search_ph": "Kullanıcı ara...",
-        "no_users_found": "Kullanıcı bulunamadı.", "customize_photo": "Resmi özelleştir", "crop_fill": "Doldur", "crop_fit": "Sığdır", "crop_reset": "Sıfırla", "crop_hint": "Sürükleyerek taşı, kaydırarak veya sıkıştırarak yakınlaştır",
+        "no_users_found": "Kullanıcı bulunamadı.", "customize_photo": "Resmi özelleştir",
         "pending_title": "Siteye girmek için adminin kararını bekleyiniz",
         "signup_requests": "Kayıt İstekleri", "recent_users": "Son Kayıt Olan Kullanıcılar",
         "approve": "Onayla", "reject": "Reddet", "status_wait": "Bekliyor", "status_ok": "Onaylı",
@@ -1149,14 +1149,9 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}
 
 /* resim kırpma diyaloğu */
 .cropdlg{text-align:center}
-dialog.cropdlg{width:min(94vw,520px)}
-.cropstage{display:flex;justify-content:center;margin:12px 0 8px}
-.cropstage canvas{background:#000;touch-action:none;cursor:grab;border-radius:10px;max-width:100%;height:auto;box-shadow:0 0 0 1px var(--line)}
-.cropstage canvas:active{cursor:grabbing}
-#cropZoom{width:100%;margin:6px 0 4px}
-.crophint{font-size:12px;color:var(--muted);margin:0 0 10px}
-.croptools{display:flex;gap:8px;justify-content:center;margin:6px 0 12px}
-.croptools .btn{padding:6px 14px;font-size:13px}
+.cropstage{display:flex;justify-content:center;margin:12px 0}
+.cropstage canvas{background:#000;touch-action:none;cursor:grab;border-radius:10px}
+#cropZoom{width:100%}
 
 /* profil menüsü */
 .menu-wrap{position:relative}
@@ -1245,7 +1240,6 @@ input[type=file]::file-selector-button:hover{background:var(--a);color:var(--on-
 .seg span:hover{color:var(--text);border-color:var(--a)}
 .seg input:checked+span{color:var(--on-a);background:var(--a);border-color:transparent;font-weight:600}
 .preview{width:100%;max-height:150px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
-#thPrev{aspect-ratio:300/140;max-height:none;height:auto}
 .avatar{width:96px;height:96px;margin:0 auto 14px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;font-size:38px;font-weight:700;color:var(--on-a)}
 .avatar img{width:100%;height:100%;object-fit:cover}
 .arow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -1269,31 +1263,6 @@ dialog::backdrop{background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
 dialog h2{margin:0 0 14px;font-size:20px}
 dialog.prof{text-align:center}
 dialog .acts,.formacts{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
-
-/* yumuşak açılış / kapanış animasyonları */
-dialog{opacity:0;transform:translateY(18px) scale(.95);transition:opacity .25s ease,transform .32s cubic-bezier(.2,.8,.2,1),overlay .32s allow-discrete,display .32s allow-discrete}
-dialog[open]{opacity:1;transform:none}
-@starting-style{dialog[open]{opacity:0;transform:translateY(18px) scale(.95)}}
-dialog::backdrop{opacity:0;transition:opacity .3s ease,overlay .3s allow-discrete,display .3s allow-discrete}
-dialog[open]::backdrop{opacity:1}
-@starting-style{dialog[open]::backdrop{opacity:0}}
-.menu{opacity:0;transform:translateY(-8px) scale(.97);transform-origin:top right;pointer-events:none;transition:opacity .18s ease,transform .24s cubic-bezier(.2,.8,.2,1)}
-.menu.show{opacity:1;transform:none;pointer-events:auto}
-.btn:active,.vb:active,.chip:active,.profile-btn:active{transform:scale(.96)}
-.menu .item:active{transform:scale(.98)}
-.menu .item{transition:background .15s,transform .12s}
-main{animation:pageIn .4s cubic-bezier(.2,.8,.2,1) both}
-.rc{animation:pageIn .45s cubic-bezier(.2,.8,.2,1) both}
-@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@view-transition{navigation:auto}
-.seg span{transition:background-color .3s ease,color .3s ease,border-color .3s ease,transform .15s ease}
-.seg label:active span{transform:scale(.96)}
-.seg input:checked+span{animation:segPop .35s cubic-bezier(.2,.8,.2,1)}
-@keyframes segPop{0%{transform:scale(.94)}60%{transform:scale(1.03)}100%{transform:none}}
-.vb.on{animation:segPop .35s cubic-bezier(.2,.8,.2,1)}
-html.theming *,html.theming *::before{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease!important}
-::view-transition-old(root),::view-transition-new(root){animation-duration:.25s}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 .flash-wrap{position:fixed;top:78px;right:18px;z-index:60;display:grid;gap:8px}
 .flash{padding:12px 18px;border:1px solid var(--line);border-left:3px solid var(--a);border-radius:12px;background:var(--solid);box-shadow:0 15px 40px var(--shadow);transition:opacity .5s,transform .5s}
 .count{font-size:clamp(40px,10vw,84px);font-weight:700;letter-spacing:2px;margin:10px 0 4px;font-variant-numeric:tabular-nums}
@@ -1322,149 +1291,76 @@ window.C31={
     set('--on-a',lum(c.a)>.6?'#000':'#fff');set('--shadow','rgba(0,0,0,.4)');
   }
 };C31.apply();
-window.smoothHidden=function(el,hide,collapse){
-  if(!el)return;
-  clearTimeout(el._t);
-  const st=el.style,T='.32s cubic-bezier(.2,.8,.2,1)',
-    reset=()=>{['transition','opacity','transform','height','overflow','paddingTop','paddingBottom','marginTop','marginBottom'].forEach(p=>{st[p]=''})},
-    rm=matchMedia('(prefers-reduced-motion:reduce)').matches,
-    zero=()=>{st.paddingTop=st.paddingBottom=st.marginTop=st.marginBottom='0'};
-  if(hide){
-    if(el.hidden||el.dataset.sm==='out')return;
-    el.dataset.sm='out';
-    if(rm){el.hidden=true;return}
-    if(collapse){
-      st.overflow='hidden';st.height=el.offsetHeight+'px';void el.offsetHeight;
-      st.transition='height '+T+',opacity .22s ease,padding '+T+',margin '+T;
-      st.height='0';st.opacity='0';zero();
-    }else{
-      st.transition='opacity .18s ease,transform .18s ease';st.opacity='0';st.transform='translateY(-6px)';
-    }
-    el._t=setTimeout(()=>{el.hidden=true;reset()},collapse?340:190);
-  }else{
-    if(!el.hidden&&el.dataset.sm!=='out')return;
-    delete el.dataset.sm;reset();el.hidden=false;
-    if(rm)return;
-    if(collapse){
-      const h=el.offsetHeight;
-      st.overflow='hidden';st.height='0';st.opacity='0';zero();void el.offsetHeight;
-      st.transition='height '+T+',opacity .28s ease,padding '+T+',margin '+T;
-      st.height=h+'px';st.opacity='1';st.paddingTop=st.paddingBottom=st.marginTop=st.marginBottom='';
-      el._t=setTimeout(reset,380);
-    }else{
-      st.opacity='0';st.transform='translateY(8px)';void el.offsetHeight;
-      st.transition='opacity .24s ease,transform .3s cubic-bezier(.2,.8,.2,1)';st.opacity='1';st.transform='none';
-      el._t=setTimeout(reset,330);
-    }
-  }
-};
-window.smoothToggle=function(el,collapse){smoothHidden(el,!el.hidden&&el.dataset.sm!=='out',collapse)};
-window.swapSrc=function(k){
-  const a=document.getElementById(k==='link'?'linkIn':'fileBox'),b=document.getElementById(k==='link'?'fileBox':'linkIn');
-  if(!a||!b)return;
-  if(!window._srcDone){window._srcDone=1;a.hidden=false;b.hidden=true;return}
-  clearTimeout(window._sw);smoothHidden(b,true);
-  window._sw=setTimeout(()=>smoothHidden(a,false),190);
-};
 </script>
 <script>
 (function(){
-  const SHAPES={circle:{w:280,h:280,ow:512,oh:512},banner:{w:440,h:205,ow:1000,oh:466}};
-  let state=null,img=new Image(),shape='circle',W=280,H=280,activeCb=null,activeCancel=null,finished=false,wired=false;
-  const ptrs=new Map();let pinch0=0,pinchS=0;
-  const $=id=>document.getElementById(id);
-  const clamp=()=>{
-    const w=img.width*state.scale,h=img.height*state.scale;
-    state.x=w>=W?Math.min(w/2,Math.max(W-w/2,state.x)):W/2;
-    state.y=h>=H?Math.min(h/2,Math.max(H-h/2,state.y)):H/2;
-  };
-  const setScale=(ns,px,py)=>{
-    ns=Math.min(state.max,Math.max(state.min,ns));
-    if(px==null){px=W/2;py=H/2}
-    const f=ns/state.scale;state.x=px-(px-state.x)*f;state.y=py-(py-state.y)*f;state.scale=ns;
-    clamp();$('cropZoom').value=ns;draw();
-  };
-  const fit=mode=>{ // 'cover' doldur, 'contain' sığdır
-    state.scale=mode==='cover'?state.cover:state.min;state.x=W/2;state.y=H/2;clamp();$('cropZoom').value=state.scale;draw();
-  };
-  function render(ctx,cw,ch){
-    const k=cw/W;
-    ctx.clearRect(0,0,cw,ch);
-    ctx.save();ctx.beginPath();
-    if(shape==='circle'){ctx.arc(cw/2,ch/2,cw/2,0,Math.PI*2)}else{ctx.rect(0,0,cw,ch)}
-    ctx.clip();
-    // boş kalan kısımlar için bulanık arka plan
-    const bs=Math.max(cw/img.width,ch/img.height)*1.1;
-    try{ctx.filter='blur('+(14*k)+'px) brightness(.7)'}catch(e){}
-    ctx.drawImage(img,cw/2-img.width*bs/2,ch/2-img.height*bs/2,img.width*bs,img.height*bs);
-    try{ctx.filter='none'}catch(e){}
-    const w=img.width*state.scale*k,h=img.height*state.scale*k;
-    ctx.drawImage(img,state.x*k-w/2,state.y*k-h/2,w,h);
-    ctx.restore();
+  let state=null, img=new Image(), activeShape='circle', activeCb=null, activeCancel=null, finished=false, wired=false;
+  const SIZE=280;
+  function els(){
+    return {dlg:document.getElementById('dCrop'), cv:document.getElementById('cropCv'),
+      zoom:document.getElementById('cropZoom'), done:document.getElementById('cropDone'),
+      cancel:document.getElementById('cropCancel')};
   }
   function draw(){
-    const cv=$('cropCv');if(!cv||!state)return;
+    const {cv}=els(); if(!cv||!state) return;
     const ctx=cv.getContext('2d');
-    render(ctx,W,H);
+    ctx.clearRect(0,0,SIZE,SIZE);
+    ctx.save();
     ctx.beginPath();
-    if(shape==='circle'){ctx.arc(W/2,H/2,W/2-1,0,Math.PI*2)}else{ctx.rect(1,1,W-2,H-2)}
+    if(activeShape==='circle'){ctx.arc(SIZE/2,SIZE/2,SIZE/2,0,Math.PI*2);}else{ctx.rect(0,0,SIZE,SIZE);}
+    ctx.clip();
+    const w=img.width*state.scale,h=img.height*state.scale;
+    ctx.drawImage(img,state.x-w/2,state.y-h/2,w,h);
+    ctx.restore();
+    ctx.beginPath();
+    if(activeShape==='circle'){ctx.arc(SIZE/2,SIZE/2,SIZE/2-1,0,Math.PI*2);}else{ctx.rect(1,1,SIZE-2,SIZE-2);}
     ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=2;ctx.stroke();
   }
   function wireOnce(){
-    if(wired)return;wired=true;
-    const cv=$('cropCv'),zoom=$('cropZoom'),done=$('cropDone'),cancel=$('cropCancel'),dlg=$('dCrop');
+    if(wired)return; wired=true;
+    const {cv,zoom,done,cancel,dlg}=els();
     if(!cv)return;
-    const pos=e=>{const r=cv.getBoundingClientRect(),k=cv.width/r.width;return [(e.clientX-r.left)*k,(e.clientY-r.top)*k,k]};
-    cv.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});try{cv.setPointerCapture(e.pointerId)}catch(err){}
-      if(ptrs.size===2){const a=[...ptrs.values()];pinch0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);pinchS=state?state.scale:1}});
-    cv.addEventListener('pointermove',e=>{
-      const p=ptrs.get(e.pointerId);if(!p||!state)return;
-      if(ptrs.size===2){
-        ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-        const a=[...ptrs.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
-        if(pinch0>0)setScale(pinchS*d/pinch0);
-        return;
-      }
-      const k=cv.width/cv.getBoundingClientRect().width;
-      state.x+=(e.clientX-p.x)*k;state.y+=(e.clientY-p.y)*k;p.x=e.clientX;p.y=e.clientY;clamp();draw();
-    });
-    const up=e=>{ptrs.delete(e.pointerId);pinch0=0};
-    cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
-    cv.addEventListener('wheel',e=>{if(!state)return;e.preventDefault();const [px,py]=pos(e);setScale(state.scale*(e.deltaY<0?1.08:0.92),px,py)},{passive:false});
-    zoom.addEventListener('input',()=>{if(state)setScale(+zoom.value)});
-    $('cropFill').addEventListener('click',()=>state&&fit('cover'));
-    $('cropFit').addEventListener('click',()=>state&&fit('contain'));
-    $('cropReset').addEventListener('click',()=>state&&fit('cover'));
+    let dragging=false,lastX=0,lastY=0;
+    cv.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;try{cv.setPointerCapture(e.pointerId)}catch(err){}});
+    cv.addEventListener('pointermove',e=>{if(!dragging||!state)return;state.x+=e.clientX-lastX;state.y+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;draw();});
+    cv.addEventListener('pointerup',()=>dragging=false);
+    cv.addEventListener('pointercancel',()=>dragging=false);
+    cv.addEventListener('wheel',e=>{if(!state)return;e.preventDefault();const d=e.deltaY<0?1.06:0.94;state.scale=Math.min(state.minScale*4,Math.max(state.minScale,state.scale*d));zoom.value=state.scale;draw();},{passive:false});
+    zoom.addEventListener('input',()=>{if(!state)return;state.scale=+zoom.value;draw();});
     done.addEventListener('click',()=>{
-      if(!state){dlg.close();return}
-      const sh=SHAPES[shape],out=document.createElement('canvas');out.width=sh.ow;out.height=sh.oh;
-      render(out.getContext('2d'),sh.ow,sh.oh);
-      const png=shape==='circle';
+      if(!state){dlg.close();return;}
+      const out=document.createElement('canvas');out.width=512;out.height=512;
+      const octx=out.getContext('2d');
+      const ratio=512/SIZE;
+      octx.save();
+      if(activeShape==='circle'){octx.beginPath();octx.arc(256,256,256,0,Math.PI*2);octx.clip();}
+      const w=img.width*state.scale*ratio,h=img.height*state.scale*ratio;
+      octx.drawImage(img,(state.x*ratio)-w/2,(state.y*ratio)-h/2,w,h);
+      octx.restore();
       out.toBlob(blob=>{
         finished=true;
-        if(blob){const f=new File([blob],png?'crop.png':'crop.jpg',{type:png?'image/png':'image/jpeg'});if(activeCb)activeCb(f)}
+        if(blob){const f=new File([blob],'crop.png',{type:'image/png'});if(activeCb)activeCb(f);}
         dlg.close();
-      },png?'image/png':'image/jpeg',0.9);
+      },'image/png',0.92);
     });
     cancel.addEventListener('click',()=>dlg.close());
-    dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close()});
-    dlg.addEventListener('close',()=>{if(!finished&&activeCancel)activeCancel()});
+    dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
+    dlg.addEventListener('close',()=>{if(!finished&&activeCancel)activeCancel();});
   }
   window.C31Crop=function(file,opts,cb,onCancel){
-    const sn=(opts&&opts.shape)||'circle';shape=SHAPES[sn]?sn:'banner';
-    W=SHAPES[shape].w;H=SHAPES[shape].h;
-    activeCb=cb;activeCancel=onCancel||null;finished=false;ptrs.clear();
-    const dlg=$('dCrop'),cv=$('cropCv');if(!dlg||!cv)return;
+    activeShape=(opts&&opts.shape)||'circle';activeCb=cb;activeCancel=onCancel||null;finished=false;
+    const {dlg,zoom,cv}=els();
+    if(!dlg||!cv)return;
     wireOnce();
-    cv.width=W;cv.height=H;state=null;
+    cv.width=SIZE;cv.height=SIZE;
     const reader=new FileReader();
     reader.onload=e=>{
       const im=new Image();
       im.onload=()=>{
         img=im;
-        const cover=Math.max(W/im.width,H/im.height),contain=Math.min(W/im.width,H/im.height);
-        state={scale:cover,cover:cover,min:Math.min(contain,cover),max:cover*5,x:W/2,y:H/2};
-        const z=$('cropZoom');z.min=state.min;z.max=state.max;z.step='any';z.value=cover;
+        const minScale=Math.max(SIZE/im.width,SIZE/im.height);
+        state={scale:minScale,minScale:minScale,x:SIZE/2,y:SIZE/2};
+        zoom.min=minScale;zoom.max=minScale*4;zoom.step=((minScale*4-minScale)/200)||0.001;zoom.value=minScale;
         draw();
       };
       im.src=e.target.result;
@@ -1480,9 +1376,9 @@ window.swapSrc=function(k){
       const f=e.target.files&&e.target.files[0];
       if(!f)return;
       window.C31Crop(f,{shape:shape},function(cropped){
-        try{const dt=new DataTransfer();dt.items.add(cropped);input.files=dt.files}catch(err){}
-        if(previewId){const p=document.getElementById(previewId);if(p){p.hidden=false;p.src=URL.createObjectURL(cropped)}}
-      },function(){input.value='';if(previewId){const p=document.getElementById(previewId);if(p)p.hidden=true}});
+        try{const dt=new DataTransfer();dt.items.add(cropped);input.files=dt.files;}catch(err){}
+        if(previewId){const p=document.getElementById(previewId);if(p){p.hidden=false;p.src=URL.createObjectURL(cropped);}}
+      },function(){input.value='';if(previewId){const p=document.getElementById(previewId);if(p)p.hidden=true;}});
     });
   };
 })();
@@ -1601,9 +1497,7 @@ TEMPLATES = {
 <dialog id="dCrop" class="cropdlg">
   <h2>{{ t('customize_photo') }}</h2>
   <div class="cropstage"><canvas id="cropCv" width="280" height="280"></canvas></div>
-  <input type="range" id="cropZoom" min="0" max="1" step="any" value="0">
-  <p class="crophint">{{ t('crop_hint') }}</p>
-  <div class="croptools"><button class="btn" type="button" id="cropFill">{{ t('crop_fill') }}</button><button class="btn" type="button" id="cropFit">{{ t('crop_fit') }}</button><button class="btn" type="button" id="cropReset">{{ t('crop_reset') }}</button></div>
+  <input type="range" id="cropZoom" min="0" max="1" step="0.001" value="0">
   <div class="acts" style="justify-content:center"><button class="btn" type="button" id="cropCancel">{{ t('cancel') }}</button><button class="btn solid" type="button" id="cropDone">{{ t('save') }}</button></div>
 </dialog>
 <dialog id="dName"><h2>{{ t('change_name') }}</h2>
@@ -1625,26 +1519,21 @@ TEMPLATES = {
 {% endif %}
 <script>
 function setTheme(th){
-  if(window._c31ready){const h=document.documentElement;h.classList.add('theming');clearTimeout(window._tt);window._tt=setTimeout(()=>h.classList.remove('theming'),500)}
   try{localStorage.setItem('theme',th)}catch(e){}
   C31.apply();
   document.querySelectorAll('button[data-theme]').forEach(b=>b.classList.toggle('on',b.dataset.theme===th));
-  const c=document.getElementById('cust');if(c){if(window._c31ready)smoothHidden(c,th!=='custom',true);else c.hidden=th!=='custom'}
+  const c=document.getElementById('cust');if(c)c.hidden=th!=='custom';
 }
-setTheme(document.documentElement.dataset.theme||'dark');window._c31ready=1;
+setTheme(document.documentElement.dataset.theme||'dark');
 document.querySelectorAll('button[data-theme]').forEach(b=>b.onclick=()=>setTheme(b.dataset.theme));
 const pb=document.getElementById('pbtn'),pm=document.getElementById('pmenu');
 if(pb){
-  let mt=0;
-  const isOpen=()=>pm.classList.contains('show');
-  const toggle=v=>{clearTimeout(mt);pb.setAttribute('aria-expanded',v);
-    if(v){pm.hidden=false;void pm.offsetWidth;pm.classList.add('show')}
-    else{pm.classList.remove('show');mt=setTimeout(()=>{pm.hidden=true},220)}};
-  pb.onclick=e=>{e.stopPropagation();toggle(!isOpen())};
-  document.addEventListener('click',e=>{if(isOpen()&&!pm.contains(e.target))toggle(false)});
+  const toggle=v=>{pm.hidden=!v;pb.setAttribute('aria-expanded',v)};
+  pb.onclick=e=>{e.stopPropagation();toggle(pm.hidden)};
+  document.addEventListener('click',e=>{if(!pm.hidden&&!pm.contains(e.target))toggle(false)});
   addEventListener('keydown',e=>{if(e.key==='Escape')toggle(false)});
   const sb=document.getElementById('setBtn'),ss=document.getElementById('setSub');
-  sb.onclick=()=>{smoothToggle(ss,true);sb.setAttribute('aria-expanded',!ss.hidden&&ss.dataset.sm!=='out')};
+  sb.onclick=()=>{ss.hidden=!ss.hidden;sb.setAttribute('aria-expanded',!ss.hidden)};
   document.querySelectorAll('[data-dlg]').forEach(b=>b.onclick=()=>{toggle(false);document.getElementById(b.dataset.dlg).showModal()});
   document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
   document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
@@ -1856,10 +1745,11 @@ tick();setInterval(tick,1000);
 const $=id=>document.getElementById(id);
 function sync(){
   const k=document.querySelector('[name=source_type]:checked').value;
-  swapSrc(k);$('linkIn').required=k==='link';$('fileIn').required=k!=='link';
+  $('linkIn').hidden=k!=='link';$('linkIn').required=k==='link';
+  $('fileBox').hidden=k==='link';$('fileIn').required=k!=='link';
 }
 document.querySelectorAll('[name=source_type]').forEach(r=>r.addEventListener('change',sync));sync();
-if(window.wireCrop)wireCrop('thIn','thPrev','banner');
+if(window.wireCrop)wireCrop('thIn','thPrev','square');
 $('lockForm').onsubmit=()=>{const v=$('lockAt').value;if(!v)return false;$('lockTs').value=new Date(v).getTime()/1000;return true};
 const ut=$('untilTxt');if(ut)ut.textContent=new Date(+ut.dataset.ts*1000).toLocaleString();
 </script>
@@ -1897,10 +1787,11 @@ const ut=$('untilTxt');if(ut)ut.textContent=new Date(+ut.dataset.ts*1000).toLoca
 const $=id=>document.getElementById(id);
 function sync(){
   const k=document.querySelector('[name=source_type]:checked').value;
-  swapSrc(k);$('linkIn').required=k==='link';
+  $('linkIn').hidden=k!=='link';$('linkIn').required=k==='link';
+  $('fileBox').hidden=k==='link';
 }
 document.querySelectorAll('[name=source_type]').forEach(r=>r.addEventListener('change',sync));sync();
-if(window.wireCrop)wireCrop('thIn','thPrev','banner');
+if(window.wireCrop)wireCrop('thIn','thPrev','square');
 </script>
 </main>{% endblock %}""",
 
@@ -1948,10 +1839,11 @@ if(window.wireCrop)wireCrop('thIn','thPrev','banner');
 const $=id=>document.getElementById(id);
 function sync(){
   const k=document.querySelector('[name=source_type]:checked').value;
-  swapSrc(k);$('linkIn').required=k==='link';$('fileIn').required=k!=='link';
+  $('linkIn').hidden=k!=='link';$('linkIn').required=k==='link';
+  $('fileBox').hidden=k==='link';$('fileIn').required=k!=='link';
 }
 document.querySelectorAll('[name=source_type]').forEach(r=>r.addEventListener('change',sync));sync();
-if(window.wireCrop)wireCrop('thIn','thPrev','banner');
+if(window.wireCrop)wireCrop('thIn','thPrev','square');
 </script>
 </div>{% include '_requests.html' %}</div></main>{% endblock %}""",
 
