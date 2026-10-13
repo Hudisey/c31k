@@ -1279,8 +1279,6 @@ dialog[open]::backdrop{opacity:1}
 @starting-style{dialog[open]::backdrop{opacity:0}}
 .menu{opacity:0;transform:translateY(-8px) scale(.97);transform-origin:top right;pointer-events:none;transition:opacity .18s ease,transform .24s cubic-bezier(.2,.8,.2,1)}
 .menu.show{opacity:1;transform:none;pointer-events:auto}
-.menu .sub:not([hidden]){animation:subIn .24s cubic-bezier(.2,.8,.2,1)}
-@keyframes subIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .btn:active,.vb:active,.chip:active,.profile-btn:active{transform:scale(.96)}
 .menu .item:active{transform:scale(.98)}
 .menu .item{transition:background .15s,transform .12s}
@@ -1288,6 +1286,12 @@ main{animation:pageIn .4s cubic-bezier(.2,.8,.2,1) both}
 .rc{animation:pageIn .45s cubic-bezier(.2,.8,.2,1) both}
 @keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @view-transition{navigation:auto}
+.seg span{transition:background-color .3s ease,color .3s ease,border-color .3s ease,transform .15s ease}
+.seg label:active span{transform:scale(.96)}
+.seg input:checked+span{animation:segPop .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes segPop{0%{transform:scale(.94)}60%{transform:scale(1.03)}100%{transform:none}}
+.vb.on{animation:segPop .35s cubic-bezier(.2,.8,.2,1)}
+html.theming *,html.theming *::before{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease!important}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.25s}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 .flash-wrap{position:fixed;top:78px;right:18px;z-index:60;display:grid;gap:8px}
@@ -1318,6 +1322,50 @@ window.C31={
     set('--on-a',lum(c.a)>.6?'#000':'#fff');set('--shadow','rgba(0,0,0,.4)');
   }
 };C31.apply();
+window.smoothHidden=function(el,hide,collapse){
+  if(!el)return;
+  clearTimeout(el._t);
+  const st=el.style,T='.32s cubic-bezier(.2,.8,.2,1)',
+    reset=()=>{['transition','opacity','transform','height','overflow','paddingTop','paddingBottom','marginTop','marginBottom'].forEach(p=>{st[p]=''})},
+    rm=matchMedia('(prefers-reduced-motion:reduce)').matches,
+    zero=()=>{st.paddingTop=st.paddingBottom=st.marginTop=st.marginBottom='0'};
+  if(hide){
+    if(el.hidden||el.dataset.sm==='out')return;
+    el.dataset.sm='out';
+    if(rm){el.hidden=true;return}
+    if(collapse){
+      st.overflow='hidden';st.height=el.offsetHeight+'px';void el.offsetHeight;
+      st.transition='height '+T+',opacity .22s ease,padding '+T+',margin '+T;
+      st.height='0';st.opacity='0';zero();
+    }else{
+      st.transition='opacity .18s ease,transform .18s ease';st.opacity='0';st.transform='translateY(-6px)';
+    }
+    el._t=setTimeout(()=>{el.hidden=true;reset()},collapse?340:190);
+  }else{
+    if(!el.hidden&&el.dataset.sm!=='out')return;
+    delete el.dataset.sm;reset();el.hidden=false;
+    if(rm)return;
+    if(collapse){
+      const h=el.offsetHeight;
+      st.overflow='hidden';st.height='0';st.opacity='0';zero();void el.offsetHeight;
+      st.transition='height '+T+',opacity .28s ease,padding '+T+',margin '+T;
+      st.height=h+'px';st.opacity='1';st.paddingTop=st.paddingBottom=st.marginTop=st.marginBottom='';
+      el._t=setTimeout(reset,380);
+    }else{
+      st.opacity='0';st.transform='translateY(8px)';void el.offsetHeight;
+      st.transition='opacity .24s ease,transform .3s cubic-bezier(.2,.8,.2,1)';st.opacity='1';st.transform='none';
+      el._t=setTimeout(reset,330);
+    }
+  }
+};
+window.smoothToggle=function(el,collapse){smoothHidden(el,!el.hidden&&el.dataset.sm!=='out',collapse)};
+window.swapSrc=function(k){
+  const a=document.getElementById(k==='link'?'linkIn':'fileBox'),b=document.getElementById(k==='link'?'fileBox':'linkIn');
+  if(!a||!b)return;
+  if(!window._srcDone){window._srcDone=1;a.hidden=false;b.hidden=true;return}
+  clearTimeout(window._sw);smoothHidden(b,true);
+  window._sw=setTimeout(()=>smoothHidden(a,false),190);
+};
 </script>
 <script>
 (function(){
@@ -1577,12 +1625,13 @@ TEMPLATES = {
 {% endif %}
 <script>
 function setTheme(th){
+  if(window._c31ready){const h=document.documentElement;h.classList.add('theming');clearTimeout(window._tt);window._tt=setTimeout(()=>h.classList.remove('theming'),500)}
   try{localStorage.setItem('theme',th)}catch(e){}
   C31.apply();
   document.querySelectorAll('button[data-theme]').forEach(b=>b.classList.toggle('on',b.dataset.theme===th));
-  const c=document.getElementById('cust');if(c)c.hidden=th!=='custom';
+  const c=document.getElementById('cust');if(c){if(window._c31ready)smoothHidden(c,th!=='custom',true);else c.hidden=th!=='custom'}
 }
-setTheme(document.documentElement.dataset.theme||'dark');
+setTheme(document.documentElement.dataset.theme||'dark');window._c31ready=1;
 document.querySelectorAll('button[data-theme]').forEach(b=>b.onclick=()=>setTheme(b.dataset.theme));
 const pb=document.getElementById('pbtn'),pm=document.getElementById('pmenu');
 if(pb){
@@ -1595,7 +1644,7 @@ if(pb){
   document.addEventListener('click',e=>{if(isOpen()&&!pm.contains(e.target))toggle(false)});
   addEventListener('keydown',e=>{if(e.key==='Escape')toggle(false)});
   const sb=document.getElementById('setBtn'),ss=document.getElementById('setSub');
-  sb.onclick=()=>{ss.hidden=!ss.hidden;sb.setAttribute('aria-expanded',!ss.hidden)};
+  sb.onclick=()=>{smoothToggle(ss,true);sb.setAttribute('aria-expanded',!ss.hidden&&ss.dataset.sm!=='out')};
   document.querySelectorAll('[data-dlg]').forEach(b=>b.onclick=()=>{toggle(false);document.getElementById(b.dataset.dlg).showModal()});
   document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
   document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
@@ -1807,8 +1856,7 @@ tick();setInterval(tick,1000);
 const $=id=>document.getElementById(id);
 function sync(){
   const k=document.querySelector('[name=source_type]:checked').value;
-  $('linkIn').hidden=k!=='link';$('linkIn').required=k==='link';
-  $('fileBox').hidden=k==='link';$('fileIn').required=k!=='link';
+  swapSrc(k);$('linkIn').required=k==='link';$('fileIn').required=k!=='link';
 }
 document.querySelectorAll('[name=source_type]').forEach(r=>r.addEventListener('change',sync));sync();
 if(window.wireCrop)wireCrop('thIn','thPrev','banner');
@@ -1849,8 +1897,7 @@ const ut=$('untilTxt');if(ut)ut.textContent=new Date(+ut.dataset.ts*1000).toLoca
 const $=id=>document.getElementById(id);
 function sync(){
   const k=document.querySelector('[name=source_type]:checked').value;
-  $('linkIn').hidden=k!=='link';$('linkIn').required=k==='link';
-  $('fileBox').hidden=k==='link';
+  swapSrc(k);$('linkIn').required=k==='link';
 }
 document.querySelectorAll('[name=source_type]').forEach(r=>r.addEventListener('change',sync));sync();
 if(window.wireCrop)wireCrop('thIn','thPrev','banner');
@@ -1901,8 +1948,7 @@ if(window.wireCrop)wireCrop('thIn','thPrev','banner');
 const $=id=>document.getElementById(id);
 function sync(){
   const k=document.querySelector('[name=source_type]:checked').value;
-  $('linkIn').hidden=k!=='link';$('linkIn').required=k==='link';
-  $('fileBox').hidden=k==='link';$('fileIn').required=k!=='link';
+  swapSrc(k);$('linkIn').required=k==='link';$('fileIn').required=k!=='link';
 }
 document.querySelectorAll('[name=source_type]').forEach(r=>r.addEventListener('change',sync));sync();
 if(window.wireCrop)wireCrop('thIn','thPrev','banner');
