@@ -88,6 +88,38 @@ download_db_from_r2()
 
 
 _last_vote_sync = 0.0
+_user_status = {}
+
+
+import gzip as _gzip
+
+_GZ_TYPES = ("text/html", "text/css", "application/javascript", "application/json", "image/svg+xml")
+
+
+@app.after_request
+def _speed(resp):
+    # Veri değişen isteklerde (ban/onay/ayar) önbellekleri hemen temizle.
+    if request.method != "GET":
+        _setting_cache.clear()
+        _user_status.clear()
+    # Yüklenen resim adresleri benzersiz (uuid) olduğu için tarayıcıda uzun süre saklanabilir.
+    if request.endpoint == "uploads" and resp.status_code == 200 and resp.mimetype.startswith("image/"):
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    # HTML/CSS/JSON yanıtlarını sıkıştır (hem hız hem Render bant genişliği).
+    try:
+        if (resp.status_code == 200 and not resp.direct_passthrough and not resp.is_streamed
+                and "gzip" in request.headers.get("Accept-Encoding", "")
+                and "Content-Encoding" not in resp.headers
+                and resp.mimetype in _GZ_TYPES):
+            data = resp.get_data()
+            if len(data) > 800:
+                resp.set_data(_gzip.compress(data, 5))
+                resp.headers["Content-Encoding"] = "gzip"
+                resp.headers["Content-Length"] = str(len(resp.get_data()))
+                resp.headers.add("Vary", "Accept-Encoding")
+    except Exception:
+        pass
+    return resp
 
 
 @app.after_request
@@ -308,10 +340,17 @@ def init_db():
     conn.close()
 
 
+_setting_cache = {}
+
+
 def get_setting(key, default=""):
+    hit = _setting_cache.get(key)
+    if hit and time.time() - hit[0] < 5:
+        return hit[1] if hit[1] is not None else default
     conn = db()
     row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
     conn.close()
+    _setting_cache[key] = (time.time(), row["value"] if row else None)
     return row["value"] if row else default
 
 
@@ -321,6 +360,7 @@ def set_setting(key, value):
                  "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, str(value)))
     conn.commit()
     conn.close()
+    _setting_cache.clear()
 
 
 def maintenance_until():
@@ -440,9 +480,16 @@ def gate():
     if request.endpoint in {None, "static", "favicon", "set_lang"}:
         return None
     if "username" in session and request.endpoint not in {"login", "logout"}:
-        conn = db()
-        row = conn.execute("SELECT banned, approved FROM users WHERE username=?", (session["username"],)).fetchone()
-        conn.close()
+        uname = session["username"]
+        hit = _user_status.get(uname)
+        if hit and time.time() - hit[0] < 5:
+            row = hit[1]
+        else:
+            conn = db()
+            row = conn.execute("SELECT banned, approved FROM users WHERE username=?", (uname,)).fetchone()
+            conn.close()
+            row = dict(row) if row else None
+            _user_status[uname] = (time.time(), row)
         if row and row["banned"]:
             session.clear()
             flash("banned_msg")
@@ -1128,7 +1175,7 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}
 .muted{color:var(--muted)}
 
 /* üst bar */
-.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:20px;padding:10px 4%;background:var(--nav);backdrop-filter:blur(10px);transform:translateZ(0);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:20px;padding:10px 4%;background:var(--nav);transform:translateZ(0);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
 .brand img{width:38px;height:38px;border-radius:11px;object-fit:cover;box-shadow:0 0 0 1px var(--line)}
 .nav{display:flex;gap:4px;flex:1}
@@ -1266,7 +1313,7 @@ input[type=file]::file-selector-button:hover{background:var(--a);color:var(--on-
 .status{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px}
 .status i{width:9px;height:9px;border-radius:50%;background:#2be48a;box-shadow:0 0 10px #2be48a}.status.off i{background:var(--danger);box-shadow:0 0 10px var(--danger)}
 dialog{width:min(92vw,400px);padding:26px;border:1px solid var(--line);border-radius:20px;background:var(--solid);color:var(--text);box-shadow:0 30px 90px var(--shadow)}
-dialog::backdrop{background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+dialog::backdrop{background:rgba(0,0,0,.66)}
 dialog h2{margin:0 0 14px;font-size:20px}
 dialog.prof{text-align:center}
 dialog .acts,.formacts{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
@@ -1284,7 +1331,8 @@ dialog[open]::backdrop{opacity:1}
 .menu .item:active{transform:scale(.98)}
 .menu .item{transition:background .15s,transform .12s}
 main{animation:pageIn .4s cubic-bezier(.2,.8,.2,1) both}
-.rc{animation:pageIn .45s cubic-bezier(.2,.8,.2,1) both}
+.rc{animation:pageIn .45s cubic-bezier(.2,.8,.2,1) both;content-visibility:auto;contain-intrinsic-size:auto 140px}
+.rc:nth-child(n+9){animation:none}
 @keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @view-transition{navigation:auto}
 .seg span{transition:background-color .3s ease,color .3s ease,border-color .3s ease,transform .15s ease}
@@ -1675,9 +1723,9 @@ addEventListener('keydown',e=>{if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(doc
   {% for item in items %}
     {% set link = item.source_type == 'link' %}
     <a class="rc" href="{{ item.source if link else media(item.source) }}"{% if link %} target="_blank" rel="noopener noreferrer"{% else %} download{% endif %}>
-      <div class="rc-thumb">{{ item.title[:1]|upper }}{% if item.thumbnail %}<img src="{{ media(item.thumbnail) }}" alt="" loading="lazy">{% endif %}</div>
+      <div class="rc-thumb">{{ item.title[:1]|upper }}{% if item.thumbnail %}<img src="{{ media(item.thumbnail) }}" alt="" loading="lazy" decoding="async">{% endif %}</div>
       <div class="rc-main">
-        {% if item.thumbnail %}<img class="bgimg" src="{{ media(item.thumbnail) }}" alt="" loading="lazy">{% endif %}
+        {% if item.thumbnail %}<img class="bgimg" src="{{ media(item.thumbnail) }}" alt="" loading="lazy" decoding="async">{% endif %}
         <div class="rc-txt">
           <h3>{{ item.title }}</h3>
           <div class="sub">{{ categories.get(item.category, item.category) }}</div>
