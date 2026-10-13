@@ -1121,6 +1121,7 @@ CSS = """
 :root{color-scheme:dark;--bg:#0a0709;--veil:rgba(8,5,7,.70);--panel:rgba(20,13,16,.88);--solid:#150e11;--line:rgba(255,70,80,.22);--text:#f6eff1;--muted:#a99ca1;--a:#ff3b47;--b:#ff7a4d;--danger:#ff5d7a;--field:#0d080a;--nav:rgba(10,6,8,.85);--thumb:#1a1013;--on-a:#fff;--shadow:rgba(0,0,0,.5);--glow:rgba(255,59,71,.18)}
 html[data-theme=light]{color-scheme:light;--bg:#f7f2f2;--veil:rgba(255,255,255,.80);--panel:rgba(255,255,255,.92);--solid:#fff;--line:rgba(160,20,30,.22);--text:#1c1114;--muted:#6f5f64;--a:#d1141f;--b:#f0562f;--danger:#e11d48;--field:#faf6f6;--nav:rgba(255,255,255,.88);--thumb:#eadcdc;--on-a:#fff;--shadow:rgba(60,20,25,.22);--glow:rgba(209,20,31,.12)}
 *{box-sizing:border-box}[hidden]{display:none!important}
+*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{display:none;width:0;height:0}
 body{margin:0;min-height:100vh;color:var(--text);background:var(--bg);font:15px/1.55 "Space Grotesk",system-ui,sans-serif;overflow-x:hidden}
 body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(var(--veil),var(--veil)),var(--bgimg) center/cover no-repeat}
 a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}
